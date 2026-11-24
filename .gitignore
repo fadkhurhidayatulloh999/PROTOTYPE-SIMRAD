@@ -1,0 +1,91 @@
+node_modules/
+dist/
+dist-cvm/
+*.db
+*.db-journal
+.env
+.DS_Store
+Thumbs.db
+
+> **Versi publik untuk portofolio** — alamat jaringan internal (Tailscale) dan NIM telah disamarkan dari versi aslinya. Isi, kode, dan hasil eksperimen sama.
+
+# SIMRAD — Sistem Informasi Manajemen Radiologi Digital
+
+Prototipe fungsional (D1) untuk UAS Sistem Informasi Radiologi — Proyek Portofolio
+SIMRAD untuk RSUD Bina Sehat, Jawa Timur.
+
+- **Mahasiswa:** Fadkhur Hidayatulloh
+- **Program studi:** Magister Terapan Imejing Diagnostik, Universitas Airlangga
+- **Mata kuliah:** Sistem Informasi Radiologi
+- **Dosen pengampu:** Soegianto Soelistiono
+- **Tanggal:** 21–26 November 2026
+
+SIMRAD adalah aplikasi web *Radiology Information System* (RIS) terintegrasi:
+registrasi pasien → order pemeriksaan → worklist radiografer → laporan hasil →
+verifikasi, lengkap dengan dashboard, metrik TAT, dan halaman integrasi
+SIMRS ⇄ RIS ⇄ PACS ⇄ Modalitas.
+
+## Isi repositori ini
+
+| Folder | Isi |
+|---|---|
+| `prototipe-web/` | Kode sumber aplikasi web SIMRAD (React + TypeScript, client dan server, skema database Drizzle). Alur MVP: registrasi, order, worklist 8 modalitas, editor laporan, dashboard TAT, log integrasi HL7/DICOM/FHIR. |
+| `integrasi-lokal/` | Jembatan DUA ARAH ke SIMRS Khanza dan PACS Orthanc sungguhan: `simrad_bridge.php`, dashboard lokal `simrad_live.html` (worklist radiolog, viewer DICOM, KPI kepala ruangan, formulir buat order dan tulis bacaan), `simrad_ro_setup.sql` untuk akun baca `simrad_ro`, dan `simrad_rw_setup.sql` untuk akun tulis terbatas `simrad_rw` (INSERT saja, dikunci kunci tulis). Terverifikasi ujung-ke-ujung 24 Nov 2026: order dan bacaan yang ditulis dari dashboard tersimpan nyata di Khanza. |
+| `eksperimen-fhir/` | Skrip dan ringkasan eksperimen kinerja FHIR pada server publik HAPI FHIR R4 (5 skenario × 10 ulangan, 21 November 2026). |
+
+Dokumen lengkap (Deliverable A–E, slide, poster, naskah video, Lembar Penilaian AI)
+ada pada paket ZIP pengumpulan UAS, bukan di repositori ini.
+
+## Cara menjalankan
+
+### 1. Dashboard lokal + jembatan Khanza–Orthanc (bagian `integrasi-lokal/`)
+
+Ini bagian yang bisa dijalankan langsung di laptop:
+
+1. Nyalakan XAMPP (Apache dan MySQL harus `Running`).
+2. Salin `simrad_bridge.php` dan `simrad_live.html` ke `C:\xampp\htdocs`.
+3. Isi kata sandi pada salinan di `htdocs` itu saja (di repositori ini hanya
+   tertulis penanda `GANTI_DENGAN_...` — **tidak ada kata sandi asli di sini**).
+4. Buat akun baca-saja dengan `simrad_ro_setup.sql` (ikuti komentar di dalam
+   berkas itu; ganti `password_pilihanmu` dengan kata sandimu sendiri).
+5. Buka `http://localhost/simrad_live.html` di Chrome.
+
+### 2. Aplikasi web prototipe (bagian `prototipe-web/`)
+
+Kode ini dibangun dan dijalankan sebagai aplikasi web Muse (React +
+TypeScript + Bun). Di repositori ini ia diterbitkan sebagai **arsip kode untuk
+penilaian dan dokumentasi (D1)** — menjalankannya kembali di luar lingkungan
+Muse memerlukan runtime tersebut, karena ada ketergantungan
+`@hatch/space-sdk` yang hanya tersedia di sana. Untuk melihat prototipe
+berjalan, gunakan tautan aplikasi yang dibagikan saat presentasi/demo.
+
+### 3. Eksperimen FHIR (bagian `eksperimen-fhir/`)
+
+```bash
+python3 run_fhir_experiment.py
+```
+
+Hasilnya tersimpan sebagai JSON/CSV. Ringkasan latensi dan *success rate*
+ada di `fhir_experiment_summary.csv`.
+
+## Kejujuran data (penting)
+
+- **Data di prototipe adalah data uji fiktif**, bukan data pasien nyata dan
+  bukan lingkungan produksi RSUD Bina Sehat (rumah sakit skenario tugas).
+- **Integrasi nyata sudah diuji 21 November 2026** (Deliverable D §3.1,
+  kasus INT-N1 s.d. INT-N6, semua LULUS): jembatan membaca tabel radiologi
+  asli Khanza (database `sik`, 1.190 tabel) lewat jaringan privat Tailscale
+  dan satu studi DICOM asli di Orthanc. Bukti JSON-nya ada di paket ZIP.
+- Angka TAT "dari 215 menit ke < 120 menit" adalah **target manajemen 2027**,
+  bukan hasil pengukuran pada pasien nyata.
+- **Tidak ada kata sandi asli di repositori ini.** Semua kata sandi tertulis
+  sebagai penanda (`GANTI_DENGAN_...`, `password_pilihanmu`); isi hanya pada
+  salinan lokal di laptop.
+- Alamat `100.x.x.x` yang tertulis di kode prototipe adalah alamat
+  jaringan privat Tailscale laptop penulis — tidak dapat dijangkau dari
+  internet publik tanpa keanggotaan jaringan dan kredensial yang sama.
+
+## Lisensi
+
+Karya akademik untuk keperluan tugas kuliah (UAS Sistem Informasi Radiologi,
+Universitas Airlangga, 2026).
