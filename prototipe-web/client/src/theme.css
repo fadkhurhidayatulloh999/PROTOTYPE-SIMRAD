@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+@import "tailwindcss";
+@import "tailwindcss-safe-area";
+
+@theme {
+  --text-xs: 12px; --text-xs--line-height: 16px;
+  --text-sm: 14px; --text-sm--line-height: 20px;
+  --text-base: 16px; --text-base--line-height: 24px;
+  --text-lg: 18px; --text-lg--line-height: 28px;
+  --text-xl: 20px; --text-xl--line-height: 28px;
+  --text-2xl: 24px; --text-2xl--line-height: 32px;
+  --text-3xl: 30px; --text-3xl--line-height: 36px;
+}
+:root {
+  color-scheme: light;
+  --bg: #FFFBF5;
+  --surface: #FFFFFF;
+  --surface2: #F0FDF9;
+  --text: #134E4A;
+  --dim: #5F7A76;
+  --border: #CCECE6;
+  --accent: #0F766E;
+  --accent2: #F59E0B;
+  --coral: #F97066;
+  --radius: 18px;
+  --space-surface: var(--surface);
+  --space-surface-alt: var(--surface2);
+  --space-muted: var(--dim);
+  --space-border: var(--border);
+  --space-accent: var(--accent);
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #0B1F1D; --surface: #14302C; --surface2: #1A3D37;
+    --text: #E6FFFA; --dim: #8FB8B1; --border: #245049; --accent: #2DD4BF;
+  }
+}
+@layer base {
+  button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]) { min-height: 2.25rem; }
+  body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; }
+}

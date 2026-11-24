@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIMRAD Live — Dashboard Integrasi Khanza &amp; Orthanc</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; background: #0c2b29; color: #e8f5f2; padding: 20px; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  .panel { background: #103935; border: 1px solid #1f5c52; border-radius: 16px; padding: 22px; }
+  h1 { font-size: 22px; margin-bottom: 6px; }
+  .sub { color: #9fd4c8; font-size: 13px; margin-bottom: 14px; }
+  .alur { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; margin-bottom: 16px; color: #b9ece1; }
+  .alur .kotak { background: #134741; border-radius: 999px; padding: 5px 12px; font-weight: 700; }
+  .alur .panah { color: #5eead4; font-weight: 800; }
+  .badge { display: inline-block; padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+  .live { background: #0d7a4f; color: #eafff5; animation: pulse 1.6s infinite; }
+  .wait { background: #8a6d1a; color: #fff8e1; }
+  .err  { background: #8c2f22; color: #ffe9e4; }
+  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: .65; } 100% { opacity: 1; } }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+  button { background: #17b6a4; color: #04211d; border: 0; border-radius: 999px; padding: 10px 22px; font-weight: 700; font-size: 14px; cursor: pointer; }
+  button:hover { background: #2cc9b6; }
+  button:disabled { opacity: .55; cursor: wait; }
+  button.kecil { padding: 7px 16px; font-size: 13px; }
+  label.auto { font-size: 13px; color: #c9e9e2; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .card { background: #0d2f2b; border: 1px solid #1f5c52; border-radius: 12px; padding: 14px; }
+  .card .num { font-size: 26px; font-weight: 800; color: #5eead4; }
+  .card .lbl { font-size: 12px; color: #9fd4c8; margin-top: 2px; }
+  h2 { font-size: 16px; margin: 18px 0 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; background: #0d2f2b; border-radius: 12px; overflow: hidden; }
+  th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid #1c4a43; vertical-align: top; }
+  th { background: #134741; color: #b9ece1; }
+  tr:last-child td { border-bottom: 0; }
+  tr.klik { cursor: pointer; }
+  tr.klik:hover td { background: #14453f; }
+  tr.pilih td { background: #175248; }
+  .st { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .st.sudah { background: #0d7a4f; color: #eafff5; }
+  .st.belum { background: #8a6d1a; color: #fff8e1; }
+  .baca { background: #0d2f2b; border: 1px solid #2b7a6b; border-radius: 12px; padding: 16px; margin-top: 12px; display: none; }
+  .baca .kepala { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .baca .meta { font-size: 12px; color: #9fd4c8; margin-bottom: 10px; }
+  .baca .isi { background: #08211e; border-radius: 10px; padding: 14px; font-size: 14px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+  .baca .kosong { color: #f5d67b; font-size: 14px; }
+  .studi { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .kartu-studi { background: #0d2f2b; border: 1px solid #1f5c52; border-radius: 12px; padding: 14px; cursor: pointer; font-size: 13px; line-height: 1.6; }
+  .kartu-studi:hover { border-color: #2cc9b6; }
+  .kartu-studi.pilih { border-color: #5eead4; background: #123f38; }
+  .kartu-studi b { color: #5eead4; }
+  .thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .thumbs img { width: 84px; height: 84px; object-fit: contain; background: #000; border: 2px solid #1f5c52; border-radius: 8px; cursor: pointer; }
+  .thumbs img.pilih { border-color: #5eead4; }
+  .viewer { background: #000; border: 1px solid #2b7a6b; border-radius: 12px; padding: 14px; display: none; }
+  .viewer .panggung { text-align: center; }
+  .viewer img.besar { max-width: 100%; max-height: 520px; background: #000; }
+  .viewer .keterangan { font-size: 12px; color: #9fd4c8; text-align: center; margin: 8px 0 12px; }
+  .viewer .kontrol { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: center; font-size: 12px; color: #c9e9e2; }
+  .viewer input[type=range] { width: 130px; accent-color: #17b6a4; }
+  .ortho { background: #0d2f2b; border: 1px solid #1f5c52; border-radius: 12px; padding: 14px; font-size: 14px; line-height: 1.7; }
+  .note { background: #fff7e0; color: #6b5410; border-radius: 12px; padding: 12px 14px; font-size: 13px; margin-top: 16px; line-height: 1.6; }
+  .errbox { background: #fdecea; color: #7c2115; border-radius: 12px; padding: 12px 14px; font-size: 13px; margin-top: 12px; display: none; line-height: 1.6; }
+  .jam { font-size: 13px; color: #c9e9e2; }
+  .grafik { background: #0d2f2b; border: 1px solid #1f5c52; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .grafik-judul { font-size: 13px; font-weight: 700; color: #b9ece1; margin: 12px 0 6px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; font-size: 12px; margin: 5px 0; }
+  .bar-row .bl { width: 190px; flex: none; color: #c9e9e2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-row .rel { flex: 1; background: #08211e; border-radius: 6px; height: 16px; }
+  .bar-row .isi-bar { background: #17b6a4; height: 16px; border-radius: 6px; min-width: 3px; }
+  .bar-row .bv { width: 44px; flex: none; font-weight: 700; color: #5eead4; }
+  .kpi-note { font-size: 12px; color: #9fd4c8; margin-top: 6px; line-height: 1.6; }
+  .formbox { background: #0d2f2b; border: 1px solid #2b7a6b; border-radius: 12px; padding: 16px; margin-bottom: 10px; }
+  .formbox label { display: block; font-size: 12px; color: #9fd4c8; margin: 10px 0 4px; }
+  .formbox select, .formbox input[type=text], .formbox input[type=password] { width: 100%; background: #08211e; color: #e8f5f2; border: 1px solid #1f5c52; border-radius: 8px; padding: 9px 10px; font-size: 13px; font-family: inherit; }
+  .hasil-tulis { font-size: 13px; margin-top: 10px; line-height: 1.6; }
+  .ok-tulis { color: #5eead4; }
+  .gagal-tulis { color: #f5a49b; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <h1>🩻 SIMRAD Live — Integrasi Nyata Khanza &amp; Orthanc</h1>
+    <p class="sub">Halaman ini tinggal di laptop yang sama dengan XAMPP (folder htdocs), jadi datanya mengalir langsung dua arah: membaca data Khanza &amp; Orthanc (akun baca simrad_ro), dan menulis order serta bacaan ke Khanza lewat akun tulis terpisah yang hanya boleh menambah baris (INSERT saja) dan dikunci kunci tulis. Data lingkungan uji pribadi, bukan data RSUD Bina Sehat.</p>
+    <div class="alur">
+      <span class="kotak">1️⃣ Order (Khanza)</span><span class="panah">→</span>
+      <span class="kotak">2️⃣ Pemeriksaan Dikerjakan</span><span class="panah">→</span>
+      <span class="kotak">3️⃣ Gambar DICOM (Viewer Orthanc)</span><span class="panah">→</span>
+      <span class="kotak">4️⃣ Bacaan Radiologi Selesai</span>
+    </div>
+    <div class="row">
+      <span id="lencana" class="badge wait">⏳ Menghubungi jembatan…</span>
+      <span id="jam" class="jam"></span>
+    </div>
+    <div class="row">
+      <button id="btnSegar">🔄 Segarkan Sekarang</button>
+      <label class="auto"><input type="checkbox" id="otomatis"> Segarkan otomatis tiap 30 detik</label>
+    </div>
+
+    <div class="cards">
+      <div class="card"><div class="num" id="cOrder">–</div><div class="lbl">Order radiologi (permintaan_radiologi ≈ HL7 ORM)</div></div>
+      <div class="card"><div class="num" id="cPeriksa">–</div><div class="lbl">Pemeriksaan dikerjakan (periksa_radiologi ≈ DICOM MPPS)</div></div>
+      <div class="card"><div class="num" id="cHasil">–</div><div class="lbl">Laporan hasil (hasil_radiologi ≈ HL7 ORU)</div></div>
+      <div class="card"><div class="num" id="cGambar">–</div><div class="lbl">Catatan gambar (gambar_radiologi)</div></div>
+      <div class="card"><div class="num" id="cTabel">–</div><div class="lbl">Total tabel di database Khanza (sik)</div></div>
+    </div>
+
+    <h2>📊 KPI untuk Kepala Ruangan (dihitung langsung dari data Khanza)</h2>
+    <div class="cards">
+      <div class="card"><div class="num" id="kTat">–</div><div class="lbl">Rata-rata TAT order → hasil selesai</div><div class="lbl" id="kTatSub"></div></div>
+      <div class="card"><div class="num" id="kTatPersen">–</div><div class="lbl">Order selesai di bawah target 2 jam</div><div class="lbl" id="kTatPersenSub"></div></div>
+      <div class="card"><div class="num" id="kBacklog">–</div><div class="lbl">Antrean belum dibaca radiolog</div><div class="lbl" id="kBacklogSub"></div></div>
+      <div class="card"><div class="num" id="kTunggu">–</div><div class="lbl">Order belum dikerjakan (perkiraan, berdasar No. Rawat)</div><div class="lbl" id="kTungguSub"></div></div>
+    </div>
+    <div class="grafik-judul">Pemeriksaan per hari (14 hari pemeriksaan terakhir)</div>
+    <div id="grafikHari" class="grafik">Memuat…</div>
+    <div class="grafik-judul">Beban kerja per dokter pemeriksa</div>
+    <div id="grafikDokter" class="grafik">Memuat…</div>
+    <div class="grafik-judul">Jenis pemeriksaan terbanyak</div>
+    <div id="grafikJenis" class="grafik">Memuat…</div>
+    <div class="grafik-judul">Jam sibuk pemeriksaan</div>
+    <div id="grafikJam" class="grafik">Memuat…</div>
+    <p class="kpi-note" id="kpiNote"></p>
+
+    <h2>✍️ Mode Dua Arah — Tulis ke Khanza</h2>
+    <div class="formbox">
+      <label for="kunciTulis">🔑 Kunci tulis (kata rahasia yang sama dengan yang diisi di file jembatan; hanya tinggal di halaman ini, tidak disimpan)</label>
+      <input type="password" id="kunciTulis" placeholder="Ketik kunci tulis di sini sebelum membuat order / menyimpan bacaan">
+      <label for="pilihKunjungan">1) Pilih kunjungan pasien (dari reg_periksa Khanza)</label>
+      <select id="pilihKunjungan"><option value="">— memuat daftar kunjungan… —</option></select>
+      <label for="pilihJenis">2) Pilih jenis pemeriksaan radiologi</label>
+      <select id="pilihJenis"><option value="">— memuat daftar pemeriksaan… —</option></select>
+      <label for="isiDiagnosa">3) Diagnosa klinis (boleh singkat)</label>
+      <input type="text" id="isiDiagnosa" placeholder="mis. batuk, nyeri dada">
+      <div style="margin-top:12px;"><button id="btnOrder">📨 Kirim Order ke Khanza</button></div>
+      <div class="hasil-tulis" id="hasilOrder"></div>
+      <p style="font-size:12px;color:#9fd4c8;margin-top:10px;line-height:1.6;">Order yang dikirim masuk beneran ke tabel permintaan_radiologi Khanza dengan nomor order otomatis (format PR + tanggal + nomor urut) dan tanda “Order dari dashboard SIMRAD (uji dua arah)” di kolom informasi tambahan. Untuk menulis bacaan: klik pemeriksaan berlabel ⏳ Belum dibaca di Worklist Radiolog di bawah, ketik bacaannya di panel yang terbuka, lalu simpan — teksnya masuk ke tabel hasil_radiologi Khanza.</p>
+    </div>
+
+    <h2>📋 Worklist Order Terbaru dari Khanza (10 order terakhir, tanpa nama pasien)</h2>
+    <table>
+      <thead><tr><th>No. Order</th><th>No. RM</th><th>Pemeriksaan</th><th>Status</th><th>Tanggal / Jam</th><th>Diagnosa Klinis</th></tr></thead>
+      <tbody id="isiWorklist"><tr><td colspan="6">Memuat…</td></tr></tbody>
+    </table>
+
+    <h2>🩺 Worklist Radiolog — Daftar Bacaan (klik satu baris untuk membaca laporannya)</h2>
+    <table>
+      <thead><tr><th>Tanggal / Jam Periksa</th><th>No. RM</th><th>Pasien</th><th>Pemeriksaan</th><th>Status</th><th>Bacaan</th></tr></thead>
+      <tbody id="isiBacaan"><tr><td colspan="6">Memuat…</td></tr></tbody>
+    </table>
+    <div class="baca" id="panelBaca">
+      <div class="kepala" id="bacaKepala"></div>
+      <div class="meta" id="bacaMeta"></div>
+      <div class="isi" id="bacaIsi"></div>
+      <div id="formTulisHasil" style="display:none; margin-top:12px;">
+        <label for="teksHasil" style="display:block;font-size:12px;color:#9fd4c8;margin-bottom:4px;">✍️ Tulis bacaan untuk pemeriksaan ini (akan disimpan ke tabel hasil_radiologi Khanza):</label>
+        <textarea id="teksHasil" style="width:100%;background:#08211e;color:#e8f5f2;border:1px solid #1f5c52;border-radius:8px;padding:10px;font-size:13px;min-height:110px;font-family:inherit;box-sizing:border-box;" placeholder="Ketik hasil bacaan radiologi di sini…"></textarea>
+        <div style="margin-top:10px;"><button id="btnSimpanHasil">💾 Simpan Bacaan ke Khanza</button></div>
+        <div class="hasil-tulis" id="hasilSimpan"></div>
+      </div>
+    </div>
+
+    <h2>🖼️ Viewer DICOM — Gambar Pemeriksaan dari Orthanc (klik studi, lalu klik gambar kecilnya)</h2>
+    <div class="studi" id="isiStudi"><p style="font-size:13px;color:#9fd4c8;">Memuat daftar studi…</p></div>
+    <div class="thumbs" id="isiThumb"></div>
+    <div class="viewer" id="panelViewer">
+      <div class="panggung"><img class="besar" id="imgBesar" alt="Gambar DICOM"></div>
+      <div class="keterangan" id="ketViewer"></div>
+      <div class="kontrol">
+        <button class="kecil" id="btnSebelum">⬅ Sebelumnya</button>
+        <button class="kecil" id="btnBerikut">Berikutnya ➡</button>
+        <label>Terang <input type="range" id="rgTerang" min="40" max="180" value="100"></label>
+        <label>Kontras <input type="range" id="rgKontras" min="40" max="180" value="100"></label>
+        <button class="kecil" id="btnReset">↺ Ulangi Tampilan</button>
+      </div>
+    </div>
+
+    <h2>🗄️ PACS Orthanc</h2>
+    <div class="ortho" id="isiOrthanc">Memuat…</div>
+
+    <div class="errbox" id="kotakError"></div>
+    <div class="note">💡 Alur lengkapnya: order masuk di Khanza → muncul di Worklist Order; pemeriksaan dikerjakan → muncul di Worklist Radiolog; gambarnya tersimpan di Orthanc → bisa dilihat di Viewer DICOM; hasil diketik di Khanza → teks bacaannya tampil dan labelnya berubah jadi ✔ Sudah dibaca. Gambar di viewer adalah pratinjau PNG yang dirender Orthanc dari file DICOM asli; penggeser Terang/Kontras hanya penyesuaian tampilan sederhana, bukan window width/level klinis.</div>
+  </div>
+</div>
+<script>
+  var JEMBATAN = 'simrad_bridge.php'; // alamat relatif: satu rumah dengan halaman ini
+  var timer = null;
+  var dataBacaan = [];
+  var idxBacaPilih = -1;
+  var dataStudi = [];
+  var daftarInstance = []; // [{id, label}]
+  var idxInstance = -1;
+
+  function ambil(act) {
+    return fetch(JEMBATAN + '?act=' + act, { cache: 'no-store' }).then(function(r) { return r.json(); });
+  }
+  function teks(id, v) { document.getElementById(id).textContent = v; }
+  function aman(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function tampilBaca(i) {
+    var b = dataBacaan[i];
+    if (!b) return;
+    document.querySelectorAll('#isiBacaan tr').forEach(function(tr) { tr.classList.remove('pilih'); });
+    var trDipilih = document.getElementById('barisBaca' + i);
+    if (trDipilih) trDipilih.classList.add('pilih');
+    var panel = document.getElementById('panelBaca');
+    panel.style.display = 'block';
+    teks('bacaKepala', '📖 Bacaan Radiologi — ' + (b.nm_perawatan || b.kd_jenis_prw || 'Pemeriksaan'));
+    teks('bacaMeta', 'Pasien: ' + (b.nm_pasien || '-') + ' (No. RM ' + (b.no_rkm_medis || '-') + ', No. Rawat ' + (b.no_rawat || '-') + ') • Diperiksa ' + b.tgl_periksa + ' ' + b.jam +
+      (b.proyeksi ? ' • Proyeksi: ' + b.proyeksi : '') + (b.dosis ? ' • Dosis: ' + b.dosis : ''));
+    idxBacaPilih = i;
+    var isi = document.getElementById('bacaIsi');
+    var formT = document.getElementById('formTulisHasil');
+    if (b.sudah_dibaca) {
+      isi.className = 'isi';
+      isi.textContent = b.hasil;
+      formT.style.display = 'none';
+    } else {
+      isi.className = 'isi kosong';
+      isi.textContent = '⏳ Belum ada bacaan — laporan untuk pemeriksaan ini belum diketik di Khanza (tabel hasil_radiologi). Kamu bisa menulisnya dari sini lewat formulir di bawah (mode dua arah), atau mengetiknya langsung di Khanza.';
+      formT.style.display = 'block';
+      document.getElementById('hasilSimpan').innerHTML = '';
+    }
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function pilihStudi(i) {
+    document.querySelectorAll('.kartu-studi').forEach(function(k) { k.classList.remove('pilih'); });
+    var kartu = document.getElementById('kartuStudi' + i);
+    if (kartu) kartu.classList.add('pilih');
+    daftarInstance = [];
+    var s = dataStudi[i];
+    if (s) {
+      s.seri.forEach(function(ser) {
+        (ser.instances || []).forEach(function(iid, ke) {
+          daftarInstance.push({ id: iid, label: (ser.modalitas || 'DICOM') + ' • ' + (ser.deskripsi || 'Seri') + ' • gambar ' + (ke + 1) });
+        });
+      });
+    }
+    var wadah = document.getElementById('isiThumb');
+    if (!daftarInstance.length) {
+      wadah.innerHTML = '<p style="font-size:13px;color:#f5d67b;">Studi ini tidak punya gambar yang bisa dipratinjau.</p>';
+      document.getElementById('panelViewer').style.display = 'none';
+      return;
+    }
+    wadah.innerHTML = daftarInstance.map(function(it, ke) {
+      return '<img id="thumb' + ke + '" src="' + JEMBATAN + '?act=pratinjau&instance=' + it.id + '" alt="' + aman(it.label) + '" title="' + aman(it.label) + '" onclick="tampilGambar(' + ke + ')">';
+    }).join('');
+    tampilGambar(0);
+  }
+
+  function tampilGambar(ke) {
+    if (ke < 0 || ke >= daftarInstance.length) return;
+    idxInstance = ke;
+    document.querySelectorAll('.thumbs img').forEach(function(im) { im.classList.remove('pilih'); });
+    var th = document.getElementById('thumb' + ke);
+    if (th) th.classList.add('pilih');
+    var panel = document.getElementById('panelViewer');
+    panel.style.display = 'block';
+    var img = document.getElementById('imgBesar');
+    img.src = JEMBATAN + '?act=pratinjau&instance=' + daftarInstance[ke].id;
+    aturFilter();
+    teks('ketViewer', daftarInstance[ke].label + ' — gambar ' + (ke + 1) + ' dari ' + daftarInstance.length);
+  }
+
+  function aturFilter() {
+    var t = document.getElementById('rgTerang').value;
+    var k = document.getElementById('rgKontras').value;
+    document.getElementById('imgBesar').style.filter = 'brightness(' + t + '%) contrast(' + k + '%)';
+  }
+
+  function segarkan() {
+    var btn = document.getElementById('btnSegar');
+    var lencana = document.getElementById('lencana');
+    var err = document.getElementById('kotakError');
+    btn.disabled = true;
+    lencana.className = 'badge wait';
+    lencana.textContent = '⏳ Menghubungi jembatan…';
+    err.style.display = 'none';
+
+    Promise.allSettled([
+      ambil('count&table=permintaan_radiologi'),
+      ambil('count&table=periksa_radiologi'),
+      ambil('count&table=hasil_radiologi'),
+      ambil('count&table=gambar_radiologi'),
+      ambil('tables'),
+      ambil('worklist&limit=10'),
+      ambil('orthanc'),
+      ambil('bacaan&limit=20'),
+      ambil('studi'),
+      ambil('kpi'),
+      ambil('calon_order')
+    ]).then(function(h) {
+      btn.disabled = false;
+      var pingOk = h[0].status === 'fulfilled' && h[0].value && h[0].value.ok;
+      if (!pingOk) {
+        lencana.className = 'badge err';
+        lencana.textContent = '🔴 Jembatan belum terjangkau';
+        err.style.display = 'block';
+        err.innerHTML = '⚠️ <b>Jembatan belum menjawab.</b> Ceklis cepat: (1) XAMPP Control Panel terbuka dan Apache + MySQL hijau Running; (2) file <b>simrad_bridge.php</b> dan <b>simrad_live.html</b> sama-sama ada di folder <b>C:\\xampp\\htdocs</b>; (3) halaman ini dibuka lewat <b>http://localhost/simrad_live.html</b>.';
+        return;
+      }
+      function jml(i) { return (h[i].status === 'fulfilled' && h[i].value && h[i].value.ok) ? h[i].value.jumlah_baris : '–'; }
+      teks('cOrder', jml(0)); teks('cPeriksa', jml(1)); teks('cHasil', jml(2)); teks('cGambar', jml(3));
+      teks('cTabel', (h[4].status === 'fulfilled' && h[4].value && h[4].value.ok) ? h[4].value.jumlah_tabel : '–');
+
+      var tb = document.getElementById('isiWorklist');
+      if (h[5].status === 'fulfilled' && h[5].value && h[5].value.ok && h[5].value.worklist.length) {
+        tb.innerHTML = h[5].value.worklist.map(function(w) {
+          return '<tr><td>' + aman(w.noorder) + '</td><td>' + aman(w.no_rkm_medis) + '</td><td>' + aman(w.nm_perawatan) + '</td><td>' + aman(w.status) + '</td><td>' + aman(w.tgl_permintaan + ' ' + w.jam_permintaan) + '</td><td>' + aman(w.diagnosa_klinis || '-') + '</td></tr>';
+        }).join('');
+      } else {
+        tb.innerHTML = '<tr><td colspan="6">Belum ada data worklist.</td></tr>';
+      }
+
+      var tbc = document.getElementById('isiBacaan');
+      if (h[7].status === 'fulfilled' && h[7].value && h[7].value.ok && h[7].value.bacaan.length) {
+        dataBacaan = h[7].value.bacaan;
+        tbc.innerHTML = dataBacaan.map(function(b, i) {
+          return '<tr class="klik" id="barisBaca' + i + '" onclick="tampilBaca(' + i + ')"><td>' + aman(b.tgl_periksa + ' ' + b.jam) + '</td><td>' + aman(b.no_rkm_medis) + '</td><td>' + aman(b.nm_pasien) + '</td><td>' + aman(b.nm_perawatan || b.kd_jenis_prw) + '</td><td>' + aman(b.status) + '</td><td>' +
+            (b.sudah_dibaca ? '<span class="st sudah">✔ Sudah dibaca</span>' : '<span class="st belum">⏳ Belum dibaca</span>') + '</td></tr>';
+        }).join('');
+      } else {
+        dataBacaan = [];
+        tbc.innerHTML = '<tr><td colspan="6">Daftar bacaan belum bisa diambil — pastikan blok <b>bacaan</b> sudah ditempel di file jembatan (simrad_bridge.php) lalu segarkan lagi.</td></tr>';
+      }
+
+      var wadahStudi = document.getElementById('isiStudi');
+      if (h[8].status === 'fulfilled' && h[8].value && h[8].value.ok && h[8].value.studi.length) {
+        dataStudi = h[8].value.studi;
+        wadahStudi.innerHTML = dataStudi.map(function(s, i) {
+          var jmlGambar = s.seri.reduce(function(a, ser) { return a + (ser.instances ? ser.instances.length : 0); }, 0);
+          var tgl = s.tanggal ? s.tanggal.slice(0, 4) + '-' + s.tanggal.slice(4, 6) + '-' + s.tanggal.slice(6, 8) : '-';
+          return '<div class="kartu-studi" id="kartuStudi' + i + '" onclick="pilihStudi(' + i + ')"><b>' + aman(s.deskripsi || 'Studi DICOM') + '</b><br>Pasien: ' + aman(s.pasien || '-') + ' (' + aman(s.id_pasien || '-') + ')<br>Tanggal: ' + tgl + ' • ' + s.seri.length + ' seri • ' + jmlGambar + ' gambar</div>';
+        }).join('');
+      } else {
+        dataStudi = [];
+        wadahStudi.innerHTML = '<p style="font-size:13px;color:#f5d67b;">Daftar studi belum bisa diambil — pastikan blok <b>studi</b> sudah ditempel di file jembatan dan Orthanc menyala, lalu segarkan lagi.</p>';
+      }
+
+      var o = document.getElementById('isiOrthanc');
+      if (h[6].status === 'fulfilled' && h[6].value && h[6].value.ok) {
+        var v = h[6].value, s = v.statistik || {};
+        o.innerHTML = 'Server <b>' + aman(v.orthanc_nama) + '</b> versi ' + aman(v.orthanc_versi) + ' — ' +
+          (s.CountStudies || 0) + ' studi DICOM, ' + (s.CountSeries || 0) + ' seri, ' + (s.CountInstances || 0) +
+          ' instance, ukuran total ±' + (s.TotalDiskSizeMB || 0) + ' MB.';
+      } else {
+        o.textContent = 'Orthanc belum menjawab lewat jembatan (cek apakah Orthanc menyala).';
+      }
+
+      // ===== KPI Kepala Ruangan =====
+      function fmtMenit(m) {
+        if (m === null || m === undefined) return '–';
+        if (m >= 60) return (Math.round(m / 6) / 10).toString().replace('.', ',') + ' jam';
+        return Math.round(m) + ' mnt';
+      }
+      function buatBar(wadahId, baris, labelFn, nilaiFn) {
+        var wadah = document.getElementById(wadahId);
+        if (!baris || !baris.length) { wadah.innerHTML = '<p style="font-size:12px;color:#9fd4c8;">Belum ada data.</p>'; return; }
+        var maks = Math.max.apply(null, baris.map(nilaiFn));
+        wadah.innerHTML = baris.map(function(b) {
+          var v = nilaiFn(b);
+          return '<div class="bar-row"><div class="bl" title="' + aman(labelFn(b)) + '">' + aman(labelFn(b)) + '</div><div class="rel"><div class="isi-bar" style="width:' + Math.max(2, Math.round(v / maks * 100)) + '%"></div></div><div class="bv">' + v + '</div></div>';
+        }).join('');
+      }
+      if (h[9].status === 'fulfilled' && h[9].value && h[9].value.ok) {
+        var k = h[9].value;
+        if (k.tat && k.tat.n > 0) {
+          teks('kTat', fmtMenit(k.tat.rata_total));
+          teks('kTatSub', 'dari ' + k.tat.n + ' order selesai • tunggu order→periksa ' + fmtMenit(k.tat.rata_tunggu) + ' • periksa→hasil ' + fmtMenit(k.tat.rata_proses));
+          var persen = Math.round(k.tat.di_bawah_2jam / k.tat.n * 100);
+          teks('kTatPersen', persen + '%');
+          teks('kTatPersenSub', k.tat.di_bawah_2jam + ' dari ' + k.tat.n + ' order');
+        } else {
+          teks('kTat', '–'); teks('kTatSub', 'belum ada order yang selesai tercatat');
+        }
+        teks('kBacklog', (k.belum_dibaca === null || k.belum_dibaca === undefined) ? '–' : k.belum_dibaca);
+        teks('kBacklogSub', k.tertua_belum_dibaca ? 'tertua: ' + k.tertua_belum_dibaca.nm_perawatan + ', ' + k.tertua_belum_dibaca.tgl_periksa + ' ' + k.tertua_belum_dibaca.jam : 'tidak ada antrean');
+        teks('kTunggu', (k.order_belum_dikerjakan === null || k.order_belum_dikerjakan === undefined) ? '–' : k.order_belum_dikerjakan);
+        buatBar('grafikHari', (k.per_hari || []).slice().reverse(), function(b) { return b.tanggal; }, function(b) { return b.jumlah; });
+        buatBar('grafikDokter', k.beban_dokter || [], function(b) { return b.nm_dokter; }, function(b) { return b.jumlah; });
+        buatBar('grafikJenis', k.per_jenis || [], function(b) { return b.nm_perawatan; }, function(b) { return b.jumlah; });
+        buatBar('grafikJam', k.jam_sibuk || [], function(b) { return 'Pukul ' + String(b.jam).padStart(2, '0') + '.00'; }, function(b) { return b.jumlah; });
+        teks('kpiNote', 'Semua angka KPI dihitung saat itu juga dari tabel Khanza asli (permintaan_radiologi, periksa_radiologi, hasil_radiologi) — bukan angka ketikan. TAT dihitung dari jam permintaan sampai jam hasil pada order yang sudah selesai.');
+      } else {
+        teks('kpiNote', 'KPI belum bisa diambil — pastikan blok kpi sudah ditempel di file jembatan (simrad_bridge.php), lalu segarkan lagi.');
+      }
+
+      // ===== Formulir dua arah: bahan pilihan =====
+      if (h[10].status === 'fulfilled' && h[10].value && h[10].value.ok) {
+        var pk = document.getElementById('pilihKunjungan');
+        var pj = document.getElementById('pilihJenis');
+        var kv = pk.value, jv = pj.value;
+        pk.innerHTML = h[10].value.kunjungan.map(function(r) {
+          return '<option value="' + aman(r.no_rawat) + '">' + aman(r.tgl_registrasi + ' ' + r.jam_reg) + ' — ' + aman(r.nm_pasien) + ' (RM ' + aman(r.no_rkm_medis) + ', ' + aman(r.status_lanjut) + ', No. Rawat ' + aman(r.no_rawat) + ')</option>';
+        }).join('') || '<option value="">Tidak ada kunjungan</option>';
+        pj.innerHTML = h[10].value.jenis.map(function(j) {
+          return '<option value="' + aman(j.kd_jenis_prw) + '">' + aman(j.nm_perawatan) + '</option>';
+        }).join('');
+        if (kv) pk.value = kv;
+        if (jv) pj.value = jv;
+      }
+
+      var skrg = new Date();
+      var jj = String(skrg.getHours()).padStart(2, '0') + '.' + String(skrg.getMinutes()).padStart(2, '0') + '.' + String(skrg.getSeconds()).padStart(2, '0');
+      lencana.className = 'badge live';
+      lencana.textContent = '🟢 LIVE — data segar dari Khanza & Orthanc';
+      teks('jam', 'Terakhir diambil pukul ' + jj);
+    });
+  }
+
+  function kirimPost(act, data) {
+    var body = new URLSearchParams();
+    body.set('kunci', document.getElementById('kunciTulis').value);
+    Object.keys(data).forEach(function(k) { body.set(k, data[k]); });
+    return fetch(JEMBATAN + '?act=' + act, { method: 'POST', body: body }).then(function(r) { return r.json(); });
+  }
+
+  function kirimOrder() {
+    var out = document.getElementById('hasilOrder');
+    var nr = document.getElementById('pilihKunjungan').value;
+    var kj = document.getElementById('pilihJenis').value;
+    if (!document.getElementById('kunciTulis').value) { out.innerHTML = '<span class="gagal-tulis">Isi dulu kunci tulisnya di kotak paling atas bagian ini.</span>'; return; }
+    if (!nr || !kj) { out.innerHTML = '<span class="gagal-tulis">Pilih dulu kunjungan dan jenis pemeriksaannya.</span>'; return; }
+    out.textContent = 'Mengirim order ke Khanza…';
+    kirimPost('buat_order', { no_rawat: nr, kd_jenis_prw: kj, diagnosa: document.getElementById('isiDiagnosa').value }).then(function(j) {
+      if (j.ok) {
+        out.innerHTML = '<span class="ok-tulis">✔ Terkirim! Nomor order baru di Khanza: <b>' + aman(j.noorder) + '</b> (' + aman(j.nm_perawatan) + '). Halaman disegarkan — lihat order teratas di Worklist Order.</span>';
+        segarkan();
+      } else {
+        out.innerHTML = '<span class="gagal-tulis">✖ ' + aman(j.pesan || 'Gagal menulis order.') + '</span>';
+      }
+    }).catch(function() { out.innerHTML = '<span class="gagal-tulis">✖ Jembatan tidak menjawab.</span>'; });
+  }
+
+  function simpanHasil() {
+    var out = document.getElementById('hasilSimpan');
+    var b = dataBacaan[idxBacaPilih];
+    if (!b) return;
+    if (!document.getElementById('kunciTulis').value) { out.innerHTML = '<span class="gagal-tulis">Isi dulu kunci tulisnya di kotak bagian Mode Dua Arah di atas.</span>'; return; }
+    var teksIsi = document.getElementById('teksHasil').value;
+    if (!teksIsi.trim()) { out.innerHTML = '<span class="gagal-tulis">Ketik dulu teks bacaannya.</span>'; return; }
+    out.textContent = 'Menyimpan bacaan ke Khanza…';
+    kirimPost('tulis_hasil', { no_rawat: b.no_rawat, tgl_periksa: b.tgl_periksa, jam: b.jam, hasil: teksIsi }).then(function(j) {
+      if (j.ok) {
+        out.innerHTML = '<span class="ok-tulis">✔ Tersimpan di Khanza! Halaman disegarkan — label pemeriksaan ini sekarang ✔ Sudah dibaca dengan teks yang baru kamu tulis.</span>';
+        document.getElementById('teksHasil').value = '';
+        segarkan();
+      } else {
+        out.innerHTML = '<span class="gagal-tulis">✖ ' + aman(j.pesan || 'Gagal menulis bacaan.') + '</span>';
+      }
+    }).catch(function() { out.innerHTML = '<span class="gagal-tulis">✖ Jembatan tidak menjawab.</span>'; });
+  }
+
+  document.getElementById('btnSegar').addEventListener('click', segarkan);
+  document.getElementById('btnOrder').addEventListener('click', kirimOrder);
+  document.getElementById('btnSimpanHasil').addEventListener('click', simpanHasil);
+  document.getElementById('btnSebelum').addEventListener('click', function() { tampilGambar(idxInstance - 1); });
+  document.getElementById('btnBerikut').addEventListener('click', function() { tampilGambar(idxInstance + 1); });
+  document.getElementById('btnReset').addEventListener('click', function() {
+    document.getElementById('rgTerang').value = 100;
+    document.getElementById('rgKontras').value = 100;
+    aturFilter();
+  });
+  document.getElementById('rgTerang').addEventListener('input', aturFilter);
+  document.getElementById('rgKontras').addEventListener('input', aturFilter);
+  document.getElementById('otomatis').addEventListener('change', function(e) {
+    if (e.target.checked) { timer = setInterval(segarkan, 30000); } else { clearInterval(timer); }
+  });
+  segarkan();
+</script>
+</body>
+</html>

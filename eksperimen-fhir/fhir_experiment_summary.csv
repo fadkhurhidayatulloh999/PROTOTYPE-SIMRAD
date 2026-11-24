@@ -1,0 +1,6 @@
+Skenario,Metode,Endpoint,Ulangan,Rata-rata latensi (ms),Simpangan baku (ms),Min (ms),Max (ms),Success rate (%)
+GET Patient,GET,https://hapi.fhir.org/baseR4/Patient?_count=5,10,992.7,293.9,814.3,1859.8,100.0
+POST Patient,POST,https://hapi.fhir.org/baseR4/Patient,10,2736.8,5430.4,711.3,19023.0,90.0
+GET ImagingStudy,GET,https://hapi.fhir.org/baseR4/ImagingStudy?_count=5,10,918.9,82.3,789.9,1039.1,60.0
+POST ImagingStudy,POST,https://hapi.fhir.org/baseR4/ImagingStudy,10,898.6,73.7,786.6,1035.3,100.0
+GET DiagnosticReport,GET,https://hapi.fhir.org/baseR4/DiagnosticReport?_count=5,10,917.5,92.7,742.0,1056.1,90.0
